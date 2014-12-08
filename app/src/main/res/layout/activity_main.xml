@@ -12,8 +12,8 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/login"
-        android:onClick="btnLoginClick" />
+        android:text="@string/get_feeds"
+        android:onClick="btnMakeFacebookActionClick" />
 
     <ListView
         android:id="@+id/list"

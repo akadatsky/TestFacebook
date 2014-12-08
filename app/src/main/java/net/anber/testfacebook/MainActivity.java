@@ -56,7 +56,7 @@ public class MainActivity extends ActionBarActivity {
 
     }
 
-    public void btnLoginClick(View view) {
+    public void btnMakeFacebookActionClick(View view) {
         Session session = Session.getActiveSession();
         if (session != null && session.isOpened() && !session.isClosed()) {
             publishStory();
