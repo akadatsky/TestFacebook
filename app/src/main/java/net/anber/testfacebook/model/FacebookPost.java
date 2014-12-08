@@ -6,6 +6,8 @@ public class FacebookPost {
     private String picture;
     private String id;
     private String created_time;
+    private String type;
+    private String object_id;
 
     public FacebookPost() {
     }
@@ -26,8 +28,15 @@ public class FacebookPost {
         return created_time;
     }
 
-    @Override
-    public String toString() {
-        return message;
+    public String getType() {
+        return type;
+    }
+
+    public String getObject_id() {
+        return object_id;
+    }
+
+    public void setPicture(String picture) {
+        this.picture = picture;
     }
 }

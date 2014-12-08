@@ -1,12 +1,18 @@
 package net.anber.testfacebook;
 
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.facebook.HttpMethod;
 import com.facebook.Request;
@@ -16,19 +22,32 @@ import com.facebook.SessionState;
 import com.facebook.UiLifecycleHelper;
 import com.facebook.model.GraphUser;
 import com.google.gson.Gson;
+import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiscCache;
+import com.nostra13.universalimageloader.cache.memory.impl.LruMemoryCache;
+import com.nostra13.universalimageloader.core.DisplayImageOptions;
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.display.RoundedBitmapDisplayer;
+import com.nostra13.universalimageloader.utils.StorageUtils;
 
 import net.anber.testfacebook.model.FacebookPost;
 
-import java.lang.reflect.Array;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity {
 
     private static final String TAG = "LOG_TAG";
-    private static final String URL = "https://www.facebook.com/PRhymeOfficial";
+
+//    private static final String URL = "https://www.facebook.com/PRhymeOfficial";
+    private static final String URL = "https://www.facebook.com/mahala360";
+
     private String facebookId = URL.substring(URL.lastIndexOf('/') + 1);
 
     private UiLifecycleHelper uiHelper;
@@ -43,6 +62,22 @@ public class MainActivity extends ActionBarActivity {
     private List<FacebookPost> items = new ArrayList<>();
     private ArrayAdapter<FacebookPost> adapter;
 
+    protected ImageLoader imageLoader;
+
+    private String iconUrl;
+
+    private DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
+            .cacheInMemory(true)
+            .cacheOnDisk(true)
+            .displayer(new RoundedBitmapDisplayer(100))
+            .build();
+
+    private DisplayImageOptions mainImageOptions = new DisplayImageOptions.Builder()
+            .showImageOnLoading(R.drawable.placeholder)
+            .cacheInMemory(true)
+            .cacheOnDisk(true)
+            .build();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,16 +85,52 @@ public class MainActivity extends ActionBarActivity {
         uiHelper = new UiLifecycleHelper(this, null);
         uiHelper.onCreate(savedInstanceState);
 
-        adapter = new ArrayAdapter<FacebookPost>(this, android.R.layout.simple_list_item_1, items);
+        imageLoader = ImageLoader.getInstance();
+
+        File cacheDir = StorageUtils.getCacheDirectory(this);
+        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
+                .memoryCache(new LruMemoryCache(2 * 1024 * 1024))
+                .memoryCacheSize(2 * 1024 * 1024)
+                .diskCache(new UnlimitedDiscCache(cacheDir))
+                .diskCacheSize(50 * 1024 * 1024)
+                .build();
+        imageLoader.init(config);
+
+        adapter = new ArrayAdapter<FacebookPost>(this, 0, items) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.list_item, parent, false);
+                }
+                FacebookPost item = getItem(position);
+
+                TextView text = (TextView) convertView.findViewById(R.id.text);
+                text.setText(item.getMessage());
+
+                ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
+                if (!TextUtils.isEmpty(iconUrl)) {
+                    imageLoader.displayImage(iconUrl, icon, iconOptions);
+                }
+
+                ImageView image = (ImageView) convertView.findViewById(R.id.image);
+
+                if (TextUtils.isEmpty(item.getPicture()) || item.getType().equalsIgnoreCase("link")) {
+                    image.setVisibility(View.GONE);
+                } else {
+                    image.setVisibility(View.VISIBLE);
+                    imageLoader.displayImage(item.getPicture(), image, mainImageOptions);
+                }
+                return convertView;
+            }
+        };
         ListView listView = (ListView) findViewById(R.id.list);
         listView.setAdapter(adapter);
-
     }
 
     public void btnMakeFacebookActionClick(View view) {
         Session session = Session.getActiveSession();
         if (session != null && session.isOpened() && !session.isClosed()) {
-            publishStory();
+            getDataFromServer();
         } else {
             Session.openActiveSession(this, true, callback);
         }
@@ -86,42 +157,115 @@ public class MainActivity extends ActionBarActivity {
                     public void onCompleted(GraphUser user, Response response) {
                         if (user != null) {
                             facebookUserName = user.getName();
-                            publishStory();
+                            getDataFromServer();
                         }
                     }
                 }).executeAsync();
             } else {
-                publishStory();
+                getDataFromServer();
             }
         }
     }
 
-    private void publishStory() {
-        Session session = Session.getActiveSession();
+    private void getDataFromServer() {
+        final Session session = Session.getActiveSession();
         if (session == null || !session.isOpened()) {
             return;
         }
-        new Request(
-                session,
-                facebookId + "/links",
-                null,
-                HttpMethod.GET,
-                new Request.Callback() {
-                    public void onCompleted(Response response) {
-                        processResponse(response);
-                    }
-                }
-        ).executeAsync();
+
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... params) {
+                Bundle bundle = new Bundle();
+                bundle.putBoolean("redirect", false);
+                bundle.putString("height", "200");
+                bundle.putString("type", "normal");
+                bundle.putString("width", "200");
+                new Request(
+                        session,
+                        facebookId + "/picture",
+                        bundle,
+                        HttpMethod.GET,
+                        new Request.Callback() {
+                            public void onCompleted(Response response) {
+                                if (response.getGraphObject() == null) {
+                                    return;
+                                }
+                                String str = response.getGraphObject().getProperty("data").toString();
+                                try {
+                                    JSONObject jo = new JSONObject(str);
+                                    iconUrl = jo.getString("url");
+                                } catch (JSONException e) {
+                                    Log.i(TAG, "can't get icon", e);
+                                }
+                            }
+                        }
+                ).executeAndWait();
+
+                new Request(
+                        session,
+                        facebookId + "/feed",
+                        null,
+                        HttpMethod.GET,
+                        new Request.Callback() {
+                            public void onCompleted(Response response) {
+                                processResponse(response, session);
+                            }
+                        }
+                ).executeAndWait();
+                return null;
+            }
+
+            @Override
+            protected void onPostExecute(Void aVoid) {
+                adapter.notifyDataSetChanged();
+            }
+        }.execute();
     }
 
-    private void processResponse(Response response) {
+    private void processResponse(Response response, final Session session) {
+        if (response.getGraphObject() == null) {
+            return;
+        }
         String str = response.getGraphObject().getProperty("data").toString();
         Gson gson = new Gson();
         FacebookPost[] arr = gson.fromJson(str, FacebookPost[].class);
-        Log.i(TAG, "Size: " + arr.length);
         items.clear();
-        items.addAll(Arrays.asList(arr));
-        adapter.notifyDataSetChanged();
+        for (final FacebookPost post : arr) {
+            if (!TextUtils.isEmpty(post.getMessage())) {
+                items.add(post);
+            }
+
+
+            if (post.getType().equalsIgnoreCase("photo") && !TextUtils.isEmpty(post.getObject_id())) {
+
+                new Request(
+                        session,
+                        post.getObject_id(),
+                        null,
+                        HttpMethod.GET,
+                        new Request.Callback() {
+                            public void onCompleted(Response response) {
+                                if (response.getGraphObject() == null) {
+                                    return;
+                                }
+                                String str = response.getGraphObject().getProperty("images").toString();
+                                try {
+                                    JSONArray ja = new JSONArray(str);
+                                    JSONObject jo = new JSONObject(ja.get(0).toString());
+                                    String url = jo.getString("source");
+                                    post.setPicture(url);
+                                } catch (JSONException e) {
+                                    Log.i(TAG, "can't get icon", e);
+                                }
+                            }
+                        }
+                ).executeAndWait();
+
+
+            }
+
+        }
     }
 
     @Override
