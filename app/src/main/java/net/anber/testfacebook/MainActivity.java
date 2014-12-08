@@ -1,5 +1,6 @@
 package net.anber.testfacebook;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -171,6 +172,14 @@ public class MainActivity extends ActionBarActivity {
         }
 
         new AsyncTask<Void, Void, Void>() {
+
+            private ProgressDialog dialog;
+
+            @Override
+            protected void onPreExecute() {
+                dialog = ProgressDialog.show(MainActivity.this, "","Loading...", true);
+            }
+
             @Override
             protected Void doInBackground(Void... params) {
                 sendRequestForUserIcon(session);
@@ -181,6 +190,7 @@ public class MainActivity extends ActionBarActivity {
             @Override
             protected void onPostExecute(Void aVoid) {
                 adapter.notifyDataSetChanged();
+                dialog.dismiss();
             }
         }.execute();
     }
