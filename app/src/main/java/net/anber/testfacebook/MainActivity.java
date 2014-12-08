@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.nostra13.universalimageloader.core.assist.ImageScaleType;
 import com.nostra13.universalimageloader.core.display.RoundedBitmapDisplayer;
 
 import net.anber.testfacebook.model.FacebookPost;
@@ -73,6 +74,8 @@ public class MainActivity extends ActionBarActivity {
 
         DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
                 .showImageOnLoading(R.drawable.placeholder)
+                .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
+                .resetViewBeforeLoading(true)
                 .cacheInMemory(true)
                 .cacheOnDisk(true)
                 .build();
@@ -98,6 +101,7 @@ public class MainActivity extends ActionBarActivity {
                 if (!TextUtils.isEmpty(iconUrl)) {
                     icon.setVisibility(View.VISIBLE);
                     DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
+                            //  .displayer(new FadeInBitmapDisplayer(500))
                             .displayer(new RoundedBitmapDisplayer(100))
                             .build();
                     imageLoader.displayImage(iconUrl, icon, iconOptions);
@@ -169,43 +173,8 @@ public class MainActivity extends ActionBarActivity {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
-                Bundle bundle = new Bundle();
-                bundle.putBoolean("redirect", false);
-                bundle.putString("height", "200");
-                bundle.putString("type", "normal");
-                bundle.putString("width", "200");
-                new Request(
-                        session,
-                        facebookId + "/picture",
-                        bundle,
-                        HttpMethod.GET,
-                        new Request.Callback() {
-                            public void onCompleted(Response response) {
-                                if (response.getGraphObject() == null) {
-                                    return;
-                                }
-                                String str = response.getGraphObject().getProperty("data").toString();
-                                try {
-                                    JSONObject jo = new JSONObject(str);
-                                    iconUrl = jo.getString("url");
-                                } catch (JSONException e) {
-                                    Log.i(TAG, "can't get icon", e);
-                                }
-                            }
-                        }
-                ).executeAndWait();
-
-                new Request(
-                        session,
-                        facebookId + "/feed",
-                        null,
-                        HttpMethod.GET,
-                        new Request.Callback() {
-                            public void onCompleted(Response response) {
-                                processResponse(response, session);
-                            }
-                        }
-                ).executeAndWait();
+                sendRequestForUserIcon(session);
+                sendRequestForFeeds(session);
                 return null;
             }
 
@@ -227,37 +196,10 @@ public class MainActivity extends ActionBarActivity {
         for (final FacebookPost post : arr) {
             if (!TextUtils.isEmpty(post.getMessage())) {
                 items.add(post);
+                if (post.getType().equalsIgnoreCase("photo") && !TextUtils.isEmpty(post.getObject_id())) {
+                    sendRequestForBigPicture(session, post);
+                }
             }
-
-
-            if (post.getType().equalsIgnoreCase("photo") && !TextUtils.isEmpty(post.getObject_id())) {
-
-                new Request(
-                        session,
-                        post.getObject_id(),
-                        null,
-                        HttpMethod.GET,
-                        new Request.Callback() {
-                            public void onCompleted(Response response) {
-                                if (response.getGraphObject() == null) {
-                                    return;
-                                }
-                                String str = response.getGraphObject().getProperty("images").toString();
-                                try {
-                                    JSONArray ja = new JSONArray(str);
-                                    JSONObject jo = new JSONObject(ja.get(0).toString());
-                                    String url = jo.getString("source");
-                                    post.setPicture(url);
-                                } catch (JSONException e) {
-                                    Log.i(TAG, "can't get icon", e);
-                                }
-                            }
-                        }
-                ).executeAndWait();
-
-
-            }
-
         }
     }
 
@@ -289,6 +231,73 @@ public class MainActivity extends ActionBarActivity {
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         uiHelper.onSaveInstanceState(outState);
+    }
+
+    private void sendRequestForFeeds(final Session session) {
+        new Request(
+                session,
+                facebookId + "/feed",
+                null,
+                HttpMethod.GET,
+                new Request.Callback() {
+                    public void onCompleted(Response response) {
+                        processResponse(response, session);
+                    }
+                }
+        ).executeAndWait();
+    }
+
+    private void sendRequestForUserIcon(Session session) {
+        Bundle bundle = new Bundle();
+        bundle.putBoolean("redirect", false);
+        bundle.putString("height", "200");
+        bundle.putString("type", "normal");
+        bundle.putString("width", "200");
+        new Request(
+                session,
+                facebookId + "/picture",
+                bundle,
+                HttpMethod.GET,
+                new Request.Callback() {
+                    public void onCompleted(Response response) {
+                        if (response.getGraphObject() == null) {
+                            return;
+                        }
+                        String str = response.getGraphObject().getProperty("data").toString();
+                        try {
+                            JSONObject jo = new JSONObject(str);
+                            iconUrl = jo.getString("url");
+                        } catch (JSONException e) {
+                            Log.i(TAG, "can't get icon", e);
+                        }
+                    }
+                }
+        ).executeAndWait();
+    }
+
+    private void sendRequestForBigPicture(Session session, final FacebookPost post) {
+        new Request(
+                session,
+                post.getObject_id(),
+                null,
+                HttpMethod.GET,
+                new Request.Callback() {
+                    public void onCompleted(Response response) {
+                        if (response.getGraphObject() == null) {
+                            return;
+                        }
+                        String str = response.getGraphObject().getProperty("images").toString();
+                        try {
+                            JSONArray ja = new JSONArray(str);
+                            JSONObject jo = new JSONObject(ja.get(0).toString());
+                            String url = jo.getString("source");
+                            post.setPicture(url);
+                        } catch (JSONException e) {
+                            Log.i(TAG, "can't get icon", e);
+                        }
+                    }
+                }
+        ).executeAndWait();
     }
 
 
