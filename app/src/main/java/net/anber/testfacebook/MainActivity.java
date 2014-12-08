@@ -109,7 +109,10 @@ public class MainActivity extends ActionBarActivity {
 
                 ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
                 if (!TextUtils.isEmpty(iconUrl)) {
+                    icon.setVisibility(View.VISIBLE);
                     imageLoader.displayImage(iconUrl, icon, iconOptions);
+                } else {
+                    icon.setVisibility(View.INVISIBLE);
                 }
 
                 ImageView image = (ImageView) convertView.findViewById(R.id.image);
