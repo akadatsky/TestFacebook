@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import com.facebook.HttpMethod;
 import com.facebook.Request;
@@ -16,6 +18,11 @@ import com.facebook.model.GraphUser;
 import com.google.gson.Gson;
 
 import net.anber.testfacebook.model.FacebookPost;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -33,6 +40,8 @@ public class MainActivity extends ActionBarActivity {
             onSessionStateChange(session, state, exception);
         }
     };
+    private List<FacebookPost> items = new ArrayList<>();
+    private ArrayAdapter<FacebookPost> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +49,11 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         uiHelper = new UiLifecycleHelper(this, null);
         uiHelper.onCreate(savedInstanceState);
+
+        adapter = new ArrayAdapter<FacebookPost>(this, android.R.layout.simple_list_item_1, items);
+        ListView listView = (ListView) findViewById(R.id.list);
+        listView.setAdapter(adapter);
+
     }
 
     public void btnLoginClick(View view) {
@@ -105,6 +119,9 @@ public class MainActivity extends ActionBarActivity {
         Gson gson = new Gson();
         FacebookPost[] arr = gson.fromJson(str, FacebookPost[].class);
         Log.i(TAG, "Size: " + arr.length);
+        items.clear();
+        items.addAll(Arrays.asList(arr));
+        adapter.notifyDataSetChanged();
     }
 
     @Override

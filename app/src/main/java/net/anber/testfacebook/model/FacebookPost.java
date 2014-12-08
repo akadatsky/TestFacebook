@@ -25,4 +25,9 @@ public class FacebookPost {
     public String getCreated_time() {
         return created_time;
     }
+
+    @Override
+    public String toString() {
+        return message;
+    }
 }
