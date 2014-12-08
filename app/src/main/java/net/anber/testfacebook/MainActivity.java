@@ -22,13 +22,10 @@ import com.facebook.SessionState;
 import com.facebook.UiLifecycleHelper;
 import com.facebook.model.GraphUser;
 import com.google.gson.Gson;
-import com.nostra13.universalimageloader.cache.disc.impl.UnlimitedDiscCache;
-import com.nostra13.universalimageloader.cache.memory.impl.LruMemoryCache;
 import com.nostra13.universalimageloader.core.DisplayImageOptions;
 import com.nostra13.universalimageloader.core.ImageLoader;
 import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
 import com.nostra13.universalimageloader.core.display.RoundedBitmapDisplayer;
-import com.nostra13.universalimageloader.utils.StorageUtils;
 
 import net.anber.testfacebook.model.FacebookPost;
 
@@ -36,7 +33,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +41,7 @@ public class MainActivity extends ActionBarActivity {
 
     private static final String TAG = "LOG_TAG";
 
-//    private static final String URL = "https://www.facebook.com/PRhymeOfficial";
+    //    private static final String URL = "https://www.facebook.com/PRhymeOfficial";
     private static final String URL = "https://www.facebook.com/mahala360";
 
     private String facebookId = URL.substring(URL.lastIndexOf('/') + 1);
@@ -66,18 +62,6 @@ public class MainActivity extends ActionBarActivity {
 
     private String iconUrl;
 
-    private DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
-            .cacheInMemory(true)
-            .cacheOnDisk(true)
-            .displayer(new RoundedBitmapDisplayer(100))
-            .build();
-
-    private DisplayImageOptions mainImageOptions = new DisplayImageOptions.Builder()
-            .showImageOnLoading(R.drawable.placeholder)
-            .cacheInMemory(true)
-            .cacheOnDisk(true)
-            .build();
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -87,12 +71,15 @@ public class MainActivity extends ActionBarActivity {
 
         imageLoader = ImageLoader.getInstance();
 
-        File cacheDir = StorageUtils.getCacheDirectory(this);
+        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
+                .showImageOnLoading(R.drawable.placeholder)
+                .cacheInMemory(true)
+                .cacheOnDisk(true)
+                .build();
+
         ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
-                .memoryCache(new LruMemoryCache(2 * 1024 * 1024))
-                .memoryCacheSize(2 * 1024 * 1024)
-                .diskCache(new UnlimitedDiscCache(cacheDir))
                 .diskCacheSize(50 * 1024 * 1024)
+                .defaultDisplayImageOptions(defaultOptions)
                 .build();
         imageLoader.init(config);
 
@@ -110,6 +97,9 @@ public class MainActivity extends ActionBarActivity {
                 ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
                 if (!TextUtils.isEmpty(iconUrl)) {
                     icon.setVisibility(View.VISIBLE);
+                    DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
+                            .displayer(new RoundedBitmapDisplayer(100))
+                            .build();
                     imageLoader.displayImage(iconUrl, icon, iconOptions);
                 } else {
                     icon.setVisibility(View.INVISIBLE);
@@ -121,7 +111,7 @@ public class MainActivity extends ActionBarActivity {
                     image.setVisibility(View.GONE);
                 } else {
                     image.setVisibility(View.VISIBLE);
-                    imageLoader.displayImage(item.getPicture(), image, mainImageOptions);
+                    imageLoader.displayImage(item.getPicture(), image);
                 }
                 return convertView;
             }
