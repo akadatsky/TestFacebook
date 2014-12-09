@@ -58,69 +58,24 @@ public class MainActivity extends ActionBarActivity {
         }
     };
     private List<FacebookPost> items = new ArrayList<>();
-    private ArrayAdapter<FacebookPost> adapter;
 
     protected ImageLoader imageLoader;
 
     private String iconUrl;
 
+    private ArrayAdapter<FacebookPost> adapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         uiHelper = new UiLifecycleHelper(this, null);
         uiHelper.onCreate(savedInstanceState);
 
-        imageLoader = ImageLoader.getInstance();
+        initImageLoader();
 
-        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
-                .showImageOnLoading(R.drawable.placeholder)
-                .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
-                .resetViewBeforeLoading(true)
-                .cacheInMemory(true)
-                .cacheOnDisk(true)
-                .build();
-
-        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
-                .diskCacheSize(50 * 1024 * 1024)
-                .defaultDisplayImageOptions(defaultOptions)
-                .build();
-        imageLoader.init(config);
-
-        adapter = new ArrayAdapter<FacebookPost>(this, 0, items) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                if (convertView == null) {
-                    convertView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.list_item, parent, false);
-                }
-                FacebookPost item = getItem(position);
-
-                TextView text = (TextView) convertView.findViewById(R.id.text);
-                text.setText(item.getMessage());
-
-                ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
-                if (!TextUtils.isEmpty(iconUrl)) {
-                    icon.setVisibility(View.VISIBLE);
-                    DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
-                            //  .displayer(new FadeInBitmapDisplayer(500))
-                            .displayer(new RoundedBitmapDisplayer(100))
-                            .build();
-                    imageLoader.displayImage(iconUrl, icon, iconOptions);
-                } else {
-                    icon.setVisibility(View.INVISIBLE);
-                }
-
-                ImageView image = (ImageView) convertView.findViewById(R.id.image);
-
-                if (TextUtils.isEmpty(item.getPicture()) || item.getType().equalsIgnoreCase("link")) {
-                    image.setVisibility(View.GONE);
-                } else {
-                    image.setVisibility(View.VISIBLE);
-                    imageLoader.displayImage(item.getPicture(), image);
-                }
-                return convertView;
-            }
-        };
+        initAdapter();
         ListView listView = (ListView) findViewById(R.id.list);
         listView.setAdapter(adapter);
     }
@@ -136,7 +91,6 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void onSessionStateChange(Session session, SessionState state, Exception exception) {
-
         if (exception != null) {
             if (session != null) {
                 try {
@@ -147,7 +101,6 @@ public class MainActivity extends ActionBarActivity {
             }
             return;
         }
-
         if (state.isOpened()) {
             if (facebookUserName == null) {
                 Request.newMeRequest(session, new Request.GraphUserCallback() {
@@ -177,7 +130,7 @@ public class MainActivity extends ActionBarActivity {
 
             @Override
             protected void onPreExecute() {
-                dialog = ProgressDialog.show(MainActivity.this, "","Loading...", true);
+                dialog = ProgressDialog.show(MainActivity.this, "", "Loading...", true);
             }
 
             @Override
@@ -308,6 +261,61 @@ public class MainActivity extends ActionBarActivity {
                     }
                 }
         ).executeAndWait();
+    }
+
+    private void initAdapter() {
+        adapter = new ArrayAdapter<FacebookPost>(this, 0, items) {
+            @Override
+            public View getView(int position, View convertView, ViewGroup parent) {
+                if (convertView == null) {
+                    convertView = LayoutInflater.from(getApplicationContext()).inflate(R.layout.list_item, parent, false);
+                }
+                FacebookPost item = getItem(position);
+
+                TextView text = (TextView) convertView.findViewById(R.id.text);
+                text.setText(item.getMessage());
+
+                ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
+                if (!TextUtils.isEmpty(iconUrl)) {
+                    icon.setVisibility(View.VISIBLE);
+                    DisplayImageOptions iconOptions = new DisplayImageOptions.Builder()
+                            .displayer(new RoundedBitmapDisplayer(100))
+                            .build();
+                    imageLoader.displayImage(iconUrl, icon, iconOptions);
+                } else {
+                    icon.setVisibility(View.INVISIBLE);
+                }
+
+                ImageView image = (ImageView) convertView.findViewById(R.id.image);
+
+                if (TextUtils.isEmpty(item.getPicture()) || item.getType().equalsIgnoreCase("link")) {
+                    image.setVisibility(View.GONE);
+                } else {
+                    image.setVisibility(View.VISIBLE);
+                    imageLoader.displayImage(item.getPicture(), image);
+                }
+                return convertView;
+            }
+        };
+    }
+
+    private void initImageLoader() {
+        imageLoader = ImageLoader.getInstance();
+
+        DisplayImageOptions defaultOptions = new DisplayImageOptions.Builder()
+                .showImageOnLoading(R.drawable.placeholder)
+                .imageScaleType(ImageScaleType.IN_SAMPLE_INT)
+                .resetViewBeforeLoading(true)
+                .cacheInMemory(true)
+                .cacheOnDisk(true)
+                .build();
+
+        ImageLoaderConfiguration config = new ImageLoaderConfiguration.Builder(this)
+                .diskCacheSize(50 * 1024 * 1024)
+                .defaultDisplayImageOptions(defaultOptions)
+                .build();
+
+        imageLoader.init(config);
     }
 
 
