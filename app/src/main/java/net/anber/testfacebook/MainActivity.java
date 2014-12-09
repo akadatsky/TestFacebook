@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,7 +36,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 
@@ -274,6 +278,18 @@ public class MainActivity extends ActionBarActivity {
 
                 TextView text = (TextView) convertView.findViewById(R.id.text);
                 text.setText(item.getMessage());
+
+                TextView dateView = (TextView) convertView.findViewById(R.id.date);
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
+                try {
+                    Date date = format.parse(item.getCreated_time());
+                    long now = System.currentTimeMillis();
+                    String dateString = DateUtils.getRelativeTimeSpanString(date.getTime(), now, DateUtils.SECOND_IN_MILLIS, DateUtils.FORMAT_ABBREV_ALL).toString();
+                    dateView.setText(dateString);
+                } catch (ParseException e) {
+                    Log.e(TAG, "parse date", e);
+                }
+
 
                 ImageView icon = (ImageView) convertView.findViewById(R.id.icon);
                 if (!TextUtils.isEmpty(iconUrl)) {
